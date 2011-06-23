@@ -212,7 +212,6 @@ inline FLOAT sd( int i, int j ) {
 }
 
 void levelset2D::extrapolate( FLOAT **q, char **region ) {	
-#if 1
 	// Unknowns
 	grid_queue unknowns;
 	
@@ -253,69 +252,6 @@ void levelset2D::extrapolate( FLOAT **q, char **region ) {
 		unknowns.pop();
 		computed[i][j] = 1;
 	}
-#else
-	cs *matrix = cs_spalloc(gn,gn,0,1,1);
-	double b[gn*gn];
-	
-	// Compute Gradient
-	computeDistGradient();
-	
-	for( int n=0; n<gn*gn; n++ ) {
-		int i=n%gn;
-		int j=n/gn;
-		b[i+j*gn] = 0.0;
-		if( grids[i][j].known ) {
-			if( region[i][j] ) {
-				cs_entry(matrix, n, n, 1.0);
-				b[i+j*gn] = q[i][j];
-			} else {
-				
-				bool hasBadNeighbors = false;
-				int query[][2] = { {i+1,j},{i-1,j},{i,j+1},{i,j-1},{i-1,j-1},{i-1,j+1},{i+1,j-1},{i+1,j+1} };
-				for( int q=0; q<8; q++ ) {
-					if( query[q][0]<0 || query[q][0]>gn-1 ||
-						query[q][1]<0 || query[q][1]>gn-1 || !grids[query[q][0]][query[q][1]].known ) {
-							hasBadNeighbors = true;
-							break;
-					}
-				}
-				
-				if( ! hasBadNeighbors ) {
-					int qi=i+1, qj=j+1;
-					FLOAT sgn[2] = { 1.0, 1.0 };
-
-					if( i>0 && sd(i-1,j)<sd(i+1,j) && grids[i-1][j].known || i==gn-1 ) { qi=i-1; sgn[0]=-1.0; }
-					if( j>0 && sd(i,j-1)<sd(i,j+1) && grids[i][j-1].known || j==gn-1 ) { qj=j-1; sgn[1]=-1.0; }
-					
-					int mi = gn*j+qi;
-					int mj = gn*qj+i;
-					// Linear Equation
-					// grad[0][i][j]*(q[mi]-q[n])/h + grad[1][i][j]*(q[mj]-q[n])/h = 0.0;
-					cs_entry(matrix, n, mi, sgn[0]*grad[0][i][j]);
-					cs_entry(matrix, n, mj, sgn[1]*grad[1][i][j]);
-					cs_entry(matrix, n, n, -sgn[0]*grad[0][i][j]-sgn[1]*grad[1][i][j]);
-					b[i+j*gn] = 0.0;
-				} else {
-					cs_entry(matrix, n, n, 1.0);
-					b[i+j*gn] = 0.0;
-				}
-			}
-		} else {
-			cs_entry(matrix, n, n, 1.0);
-			b[i+j*gn] = 0.0;
-		}
-	}
-	
-	cs *A = cs_compress(matrix);
-	cs_spfree(matrix);
-	cs_lusol (1, A, b, 0) ;
-	cs_spfree(A);
-	for( int n=0; n<gn*gn; n++ ) {
-		int i=n%gn;
-		int j=n/gn;
-		q[i][j]=b[n];
-	}
-#endif
 }
 
 static void intersect( FLOAT x1, FLOAT y1, FLOAT x2, FLOAT y2, FLOAT &x, FLOAT &y  ) {
