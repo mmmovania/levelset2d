@@ -424,7 +424,7 @@ static void flow( FLOAT x, FLOAT y, FLOAT &uu, FLOAT &vv, FLOAT &dt ) {
 }
 
 static void setMaxDistOfLevelSet() {
-#if 1
+#if 0
 	FLOAT max_vel = 0.0;
 	FOR_EVERY_CELL(gn) {
 		FLOAT xv = (u[0][i][j]+u[0][i+1][j])*0.5;
